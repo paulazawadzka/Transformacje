@@ -6,7 +6,7 @@ Created on Tue Mar 29 12:27:20 2022
 """
 
 import numpy as np
-from inf2_proj1 import *
+from Transformacje import *
 
 el_grs80 = Transformacje(model = 'grs80')
 
