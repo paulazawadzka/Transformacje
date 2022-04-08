@@ -12,6 +12,13 @@ import numpy as np
 
 class Transformacje:
     def __init__(self, model: str = "grs80"):
+        """
+        Parametry elipsoid:
+            a - duża półoś elipsoidy - promień równikowy
+            b - mała półoś elipsoidy - promień południkowy
+            f - spłaszczenie
+            e2 - mimośród^2
+        """
         if model == "wgs84":
             self.a = 6378137.0
             self.b = 6356752.31424528
@@ -23,7 +30,16 @@ class Transformacje:
         self.f = (self.a - self.b) / self.a
         self.e2 = 2 * self.f - self.f ** 2          
     
-    def s_m_s(self, fi):
+    def d_m_s(self, fi):
+        """
+        Zamiana radianów na stopnie, minuty, sekundy.
+
+        Parameters
+        ----------
+        fi : FLOAT
+            wartość kąta [rad]
+
+        """
         fi = fi*180/math.pi
         d = np.floor(fi)
         m = np.floor((fi-d)*60)
@@ -31,6 +47,24 @@ class Transformacje:
         print(d,'st',m,'min',s,'sek')
         
     def xyz2blh_hirvonen(self, X, Y, Z):
+        """
+        Algorytm Hirvonena - algorytm transformacji współrzędnych ortokartezjańskich (x, y, z)
+        na współrzędne geodezyjne długość szerokość i wysokość elipsoidalna (fi, lam, h). Jest to proces iteracyjny. 
+        W wyniku 3-4-krotnej iteracji wyznaczenia wsp. fi można przeliczyć współrzędne z dokładnoscią ok 1 cm.     
+        Parameters
+        ----------
+        X, Y, Z : FLOAT
+             współrzędne w układzie ortokartezjańskim 
+
+        Returns
+        -------
+        fi_n : FLOAT
+            szerokość geodezyjna [stopnie dziesiętne]
+        lam : FLOAT
+            długość geodezyjna [stopnie dziesiętne]
+        h : FLOAT
+            wysokość elipsoidalna [m]
+        """
         r = math.sqrt(X**2 + Y**2)
         fi_n = math.atan(Z/(r * (1 - self.e2)))
         eps = 0.000001/3600 * math.pi/180
@@ -43,18 +77,60 @@ class Transformacje:
         lam = math.atan(Y/X)
         N = self.a/np.sqrt(1 - self.e2 * np.sin(fi_n)**2)
         h = r/np.cos(fi_n) - N
+        fi_n = fi_n*180/math.pi
+        lam = lam*180/math.pi 
         return fi_n, lam, h
         
         
     def blh2xyz(self, fi, lam, h):
+        """
+        Zamiana współrzędnych geodezyjnych długości szerokości i wysokości elipsoidalnej (phi, lam, h)
+        na współrzędnych ortokartezjańskich (x, y, z). Działanie odwrotne do algorytmu Hirvonena.
+
+        Parameters
+        ----------
+        fi : FLOAT
+            szerokość geodezyjna [stopnie dziesiętne]
+        lam : FLOAT
+            długość geodezyjna [stopnie dziesiętne]
+        h : FLOAT
+            wysokość elipsoidalna [m]
+
+        Returns
+        -------
+        X, Y, Z : FLOAT
+             współrzędne w układzie ortokartezjańskim
+
+        """
+        fi = fi*math.pi/180
+        lam = lam*math.pi/180
         N = self.a / math.sqrt(1 - self.e2 * (math.sin(fi))**2)
         X = (N + h) * math.cos(fi) * math.cos(lam)
         Y = (N + h) * math.cos(fi) * math.sin(lam)
         Z = (N * (1 - self.e2) + h) * math.sin(fi)
-        return(X, Y, Z)
+        return X, Y, Z
         
     
     def uklad_1992(self, fi, lam):
+        """
+        Zamiana współrzędnych geodezyjnych długości szerokości i wysokości elipsoidalnej (phi, lam, h)
+        na współrzędnych płaskich układu polskiego 1992 (x, y).
+
+        Parameters
+        ----------
+        fi : FLOAT
+            szerokość geodezyjna [stopnie dziesiętne]
+        lam : FLOAT
+            długość geodezyjna [stopnie dziesiętne]
+
+        Returns
+        -------
+        x92, y92 : FLOAT
+            współrzędne w układzie 1992
+
+        """
+        fi = fi*math.pi/180
+        lam = lam*math.pi/180
         m_0 = 0.9993
         N = self.a/(math.sqrt(1 - self.e2 * np.sin(fi)**2))
         t = np.tan(fi)
@@ -79,6 +155,25 @@ class Transformacje:
         return x92, y92 
  
     def uklad_2000(self, fi, lam):
+        """
+        Zamiana współrzędnych geodezyjnych długości szerokości i wysokości elipsoidalnej (phi, lam, h)
+        na współrzędnych płaskich układu polskiego 2000 (x, y).
+
+        Parameters
+        ----------
+        fi : FLOAT
+            szerokość geodezyjna [stopnie dziesiętne]
+        lam : FLOAT
+            długość geodezyjna [stopnie dziesiętne]
+
+        Returns
+        -------
+        x00, y0 : FLOAT
+            współrzędne w układzie 2000
+
+        """
+        fi = fi*math.pi/180
+        lam = lam*math.pi/180
         m_0 = 0.999923
         N = self.a/(math.sqrt(1 - self.e2 * np.sin(fi)**2))
         t = np.tan(fi)
@@ -120,6 +215,22 @@ class Transformacje:
         return x00, y00 
  
     def xyz2neu(self, X, Y, Z, X0, Y0, Z0):
+        """
+        Zamiana współrzędnych ortokartezjańskich (x, y, z) na współrzędne topocentryczne (N, E, U).
+
+        Parameters
+        ----------
+        X, Y, Z : FLOAT
+            współrzędne ortokartezjańskie punktu
+        X0, Y0, Z0 : FLOAT
+            współrzędne ortokartezjańskie drugiego punktu
+
+        Returns
+        -------
+        N, E, U : FLOAT
+            współrzędne topocentryczne
+
+        """
         delta_X = X - X0
         delta_Y = Y - Y0
         delta_Z = Z - Z0
@@ -135,9 +246,31 @@ class Transformacje:
         N = float(NEU[0])
         E = float(NEU[1])
         U = float(NEU[2])
-        return(N, E, U)
+        return N, E, U
  
     def az_elev_dis(self, X, Y, Z, X0, Y0, Z0):
+        """
+        Oblicznie azymutu, kąta elewacji, odległości 2D oraz 3D w układzie topocentrycznym (N, E, U)
+
+        Parameters
+        ----------
+        X, Y, Z : FLOAT
+            współrzędne ortokartezjańskie punktu
+        X0, Y0, Z0 : FLOAT
+            współrzędne ortokartezjańskie drugiego punktu
+
+        Returns
+        -------
+        Az : FLOAT
+            azymut [stopnie dziesiętne]
+        elev : FLOAT
+            kąt elewacji [stopnie dziesiętne]
+        HZdist : FLOAT
+            odległość 2D
+        ELdist : FLOAT
+            odległość 3D
+
+        """
         
         N, E, U = self.xyz2neu(X, Y, Z, X0, Y0, Z0)
         
@@ -148,32 +281,26 @@ class Transformacje:
         if Az < 0:
             Az = Az + 2*math.pi
             
-        return(Az, elev, HZdist, ELdist)
+        Az = Az*180/math.pi
+        elev = elev*180/math.pi
+        return Az, elev, HZdist, ELdist
  
+if __name__ == "__main__":
+    # utworzenie obiektu
+    test = Transformacje(model = "wgs84")
+    # dane XYZ geocentryczne
+    X = 3664940.500; Y = 1409153.590; Z = 5009571.170
+    # transformacje
+    fi, lam, h = test.xyz2blh_hirvonen(X, Y, Z)
+    print(f"blh: {fi:.7f}, {lam:.7f}, {h:.3f}")
+    x, y, z = test.blh2xyz(fi, lam, h)
+    print(f"xyz: {x:.3f}, {y:.3f}, {z:.3f}")
+    x00, y00 = test.uklad_2000(fi, lam)
+    print(f"xy2000: {x00:.3f}, {y00:.3f}")
+    x92, y92 = test.uklad_1992(fi, lam)
+    print(f"xy1992: {x92:.3f}, {y92:.3f}")   
+    N, E, U = test.xyz2neu(X, Y, Z, X+1, Y+1, Z+1)
+    print(f"NEU: {N:.6f}, {E:.6f}, {U:.6f}")
+    az, el, hor_d, v_d = test.az_elev_dis(X, Y, Z, X+1, Y+1, Z+1)
+    print(f"az = {az:.6f}, elev = {el:.6f}, 2D distance = {hor_d:.3f}, 3D distance = {v_d:.3f}")
     
-#TEST
-
-X = 3664940.500
-Y = 1409153.590
-Z = 5009571.170
-test = Transformacje("grs80")
-fi, lam, hel = test.xyz2blh_hirvonen(X, Y, Z)
-test.s_m_s(fi)
-X1, Y1, Z1 = test.blh2xyz(fi, lam, hel)
-
-
-XG = 3763917
-YG = 1235727
-ZG = 4982084+13*15
-fiG, lamG, helG = test.xyz2blh_hirvonen(XG, YG, ZG)
-X00, Y00 = test.uklad_2000(fiG, lamG)
-X92, Y92 = test.uklad_1992(fiG, lamG)
-print(X00, Y00)
-print(X92, Y92)
-
-N, E, U = test.xyz2neu(X, Y, Z, X+1, Y+1, Z+1)
-print(N, E, U)
-
-Az, elev, HZdist, ELdist = test.az_elev_dis(X, Y, Z, X+1, Y+1, Z+1)
-test.s_m_s(elev)
-print(HZdist)
