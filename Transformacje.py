@@ -30,21 +30,6 @@ class Transformacje:
         self.f = (self.a - self.b) / self.a
         self.e2 = 2 * self.f - self.f ** 2          
     
-    def d_m_s(self, fi):
-        """
-        Zamiana radianów na stopnie, minuty, sekundy.
-
-        Parameters
-        ----------
-        fi : FLOAT
-            wartość kąta [rad]
-
-        """
-        fi = fi*180/math.pi
-        d = np.floor(fi)
-        m = np.floor((fi-d)*60)
-        s = round((fi-d-m/60)*3600,5)
-        print(d,'st',m,'min',s,'sek')
         
     def xyz2blh_hirvonen(self, X, Y, Z):
         """
@@ -75,7 +60,6 @@ class Transformacje:
             h = r/np.cos(fi_n) - N
             fi_n = math.atan(Z/(r * (1 - self.e2 * (N/(N+h)))))
         lam = math.atan(Y/X)
-        N = self.a/np.sqrt(1 - self.e2 * np.sin(fi_n)**2)
         h = r/np.cos(fi_n) - N
         fi_n = fi_n*180/math.pi
         lam = lam*180/math.pi 
@@ -154,6 +138,7 @@ class Transformacje:
         
         return x92, y92 
  
+    
     def uklad_2000(self, fi, lam):
         """
         Zamiana współrzędnych geodezyjnych długości szerokości i wysokości elipsoidalnej (phi, lam, h)
@@ -214,6 +199,7 @@ class Transformacje:
         
         return x00, y00 
  
+    
     def xyz2neu(self, X, Y, Z, X0, Y0, Z0):
         """
         Zamiana współrzędnych ortokartezjańskich (x, y, z) na współrzędne topocentryczne (N, E, U).
@@ -248,6 +234,7 @@ class Transformacje:
         U = float(NEU[2])
         return N, E, U
  
+    
     def az_elev_dis(self, X, Y, Z, X0, Y0, Z0):
         """
         Oblicznie azymutu, kąta elewacji, odległości 2D oraz 3D w układzie topocentrycznym (N, E, U)
@@ -285,6 +272,7 @@ class Transformacje:
         elev = elev*180/math.pi
         return Az, elev, HZdist, ELdist
  
+    
 if __name__ == "__main__":
     # utworzenie obiektu
     test = Transformacje(model = "wgs84")
